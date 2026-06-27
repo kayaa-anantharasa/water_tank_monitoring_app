@@ -1,0 +1,68 @@
+{
+  "project_info": {
+    "project_number": "264131140065",
+    "firebase_url": "https://water-tank-a9ff2-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "water-tank-a9ff2",
+    "storage_bucket": "water-tank-a9ff2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:264131140065:android:8f1469960f31d914159aa0",
+        "android_client_info": {
+          "package_name": "com.example.flutter_application_1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAgCx3jjcuzphZf8J_0DiW1GR9cG5Y4LJM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:264131140065:android:795d8ebb324cf4ea159aa0",
+        "android_client_info": {
+          "package_name": "com.example.smart_water_tank"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAgCx3jjcuzphZf8J_0DiW1GR9cG5Y4LJM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:264131140065:android:e82af33988667fa6159aa0",
+        "android_client_info": {
+          "package_name": "com.example.watertank"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAgCx3jjcuzphZf8J_0DiW1GR9cG5Y4LJM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
