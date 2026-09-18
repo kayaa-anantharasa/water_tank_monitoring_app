@@ -3,6 +3,7 @@ import 'package:smart_water_tank/user/more/AI_chatbot.dart';
 import 'package:smart_water_tank/user/more/PHstatus.dart';
 import 'package:smart_water_tank/user/more/pump_control.dart';
 import 'package:smart_water_tank/user/more/tank_details.dart';
+import 'package:smart_water_tank/user/more/water_prediction_screen.dart';
 
 class MoreScreen extends StatelessWidget {
   // Pass this variable from your login state (true if Admin, false if Guest)
@@ -53,6 +54,16 @@ class MoreScreen extends StatelessWidget {
             icon: Icons.propane_tank,
             iconColor: Colors.blueGrey,
             destinationPage: TankDetailsScreen(),
+          ),
+          const SizedBox(height: 12),
+
+          _buildMenuCard(
+            context: context,
+            title: 'Water Prediction',
+            subtitle: 'Usage trend, refill timing, and water level forecasts',
+            icon: Icons.auto_graph,
+            iconColor: Colors.indigo,
+            destinationPage: const WaterPredictionScreen(),
           ),
           const SizedBox(height: 12),
 
@@ -125,7 +136,7 @@ class MoreScreen extends StatelessWidget {
             leading: Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
+                color: iconColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: iconColor, size: 28),
