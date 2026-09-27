@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'user/startupscreen.dart';
-// உங்கள் firebase_options.dart கோப்பை இங்கே இறக்குமதி செய்யவும்
-// import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Firebase-ஐத் தொடங்குதல் (flutterfire configure செய்த பிறகு options-ஐ மாற்றவும்)
   await Firebase.initializeApp(
-    // options: DefaultFirebaseOptions.currentPlatform,
+    options: DefaultFirebaseOptions.currentPlatform,
   );
 
   runApp(const MyApp());

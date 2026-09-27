@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -48,6 +45,16 @@ class DefaultFirebaseOptions {
         );
     }
   }
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyAgCx3jjcuzphZf8J_0DiW1GR9cG5Y4LJM',
+    appId: '1:264131140065:web:795d8ebb324cf4ea159aa0',
+    messagingSenderId: '264131140065',
+    projectId: 'water-tank-a9ff2',
+    authDomain: 'water-tank-a9ff2.firebaseapp.com',
+    databaseURL: 'https://water-tank-a9ff2-default-rtdb.asia-southeast1.firebasedatabase.app',
+    storageBucket: 'water-tank-a9ff2.firebasestorage.app',
+  );
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyAgCx3jjcuzphZf8J_0DiW1GR9cG5Y4LJM',
