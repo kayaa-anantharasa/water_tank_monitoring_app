@@ -46,17 +46,17 @@ class _AlertsScreenState extends State<AlertsScreen> {
 
   // --- PDF Generation Function ---
 
-  Future<void> _generateAndSharePDF(List<AlertData> currentAlerts) async {
+  Future<void> _generateAndSharePDF(
+    List<AlertData> currentAlerts, {
+    double? waterLevel,
+    bool? pumpStatus,
+  }) async {
     try {
       final pdf = pw.Document();
       final reportDate = DateFormat('dd MMMM yyyy').format(DateTime.now());
         final issueAlerts = currentAlerts
           .where((alert) => !alert.title.startsWith('Water Pump Status:'))
           .toList();
-        final pumpStatusAlert = currentAlerts
-          .where((alert) => alert.title.startsWith('Water Pump Status:'))
-          .firstOrNull;
-
       final umsLogoBytes =
           (await rootBundle.load('assets/images/ums_logo.png'))
               .buffer
@@ -253,13 +253,15 @@ class _AlertsScreenState extends State<AlertsScreen> {
                   ],
                   [
                     'Last Recorded Water Level',
-                    'Refer to the latest sensor record',
+                    waterLevel == null
+                        ? 'Unavailable'
+                        : '${waterLevel.toStringAsFixed(1)}%',
                   ],
                   [
                     'Pump Status',
-                    pumpStatusAlert?.title.endsWith('ON') == true
+                    pumpStatus == true
                         ? 'ON - Operating'
-                        : pumpStatusAlert?.title.endsWith('OFF') == true
+                        : pumpStatus == false
                             ? 'OFF - Not operating'
                             : 'Unavailable',
                   ],
@@ -386,6 +388,8 @@ class _AlertsScreenState extends State<AlertsScreen> {
       stream: _dbRef.orderByChild('timestamp').limitToLast(1).onValue,
       builder: (context, AsyncSnapshot<DatabaseEvent> snapshot) {
         List<AlertData> activeAlerts = [];
+        double? latestWaterLevel;
+        bool? latestPumpStatus;
         bool isLoading = snapshot.connectionState == ConnectionState.waiting;
         bool hasError = snapshot.hasError;
 
@@ -434,6 +438,8 @@ class _AlertsScreenState extends State<AlertsScreen> {
                       ? false
                       : null
                   : null;
+                latestWaterLevel = waterLevel;
+                latestPumpStatus = pumpStatus;
             final int timestampMillis = (sensorData['timestamp'] ?? 0).toInt();
 
             DateTime lastUpdateDate = DateTime.fromMillisecondsSinceEpoch(
@@ -555,7 +561,11 @@ class _AlertsScreenState extends State<AlertsScreen> {
               }
 
               // If they are an admin, proceed with generating the PDF
-              await _generateAndSharePDF(activeAlerts);
+              await _generateAndSharePDF(
+                activeAlerts,
+                waterLevel: latestWaterLevel,
+                pumpStatus: latestPumpStatus,
+              );
             },
             // Change colors and icons dynamically based on admin status
             backgroundColor: widget.isAdmin
