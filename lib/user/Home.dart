@@ -51,7 +51,8 @@ class _HomeScreenState extends State<HomeScreen> {
               .toDouble();
           final double flowSensor2 = (sensorData['flow_sensor2'] ?? 0)
               .toDouble();
-          final double ph = (sensorData['ph'] ?? 7.0).toDouble();
+            final double? ph = double.tryParse('${sensorData['ph'] ?? ''}');
+          final bool? pumpStatus = _parsePumpStatus(sensorData['pump_active']);
 
           // Parse the timestamp
           final int timestampMillis = (sensorData['timestamp'] ?? 0).toInt();
@@ -94,10 +95,136 @@ class _HomeScreenState extends State<HomeScreen> {
                 _buildFlowCard(flowSensor1, flowSensor2),
                 const SizedBox(height: 16),
                 _buildPhCard(ph),
+                const SizedBox(height: 16),
+                _buildPumpStatusCard(pumpStatus),
               ],
             ),
           );
         },
+      ),
+    );
+  }
+
+  bool? _parsePumpStatus(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      switch (value.trim().toLowerCase()) {
+        case 'on':
+        case 'true':
+        case '1':
+          return true;
+        case 'off':
+        case 'false':
+        case '0':
+          return false;
+      }
+    }
+    return null;
+  }
+
+  Widget _buildPhCard(double? ph) {
+    final bool isAvailable = ph != null;
+    final bool isInRange = isAvailable && ph >= 6.5 && ph <= 8.5;
+    final Color statusColor = !isAvailable
+        ? Colors.blueGrey
+        : isInRange
+            ? Colors.green
+            : Colors.red;
+
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Icon(Icons.science_outlined, color: statusColor, size: 32),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'pH Level',
+                    style: TextStyle(
+                      fontSize: 17,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    !isAvailable
+                        ? 'Unavailable'
+                        : isInRange
+                            ? 'Within safe range'
+                            : 'Out of range',
+                    style: TextStyle(color: statusColor),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              isAvailable ? '${ph.toStringAsFixed(2)} pH' : '--',
+              style: TextStyle(
+                fontSize: 20,
+                color: statusColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPumpStatusCard(bool? pumpStatus) {
+    final Color statusColor = pumpStatus == null
+        ? Colors.blueGrey
+        : pumpStatus
+            ? Colors.green
+            : Colors.orange;
+    final String statusText = pumpStatus == null
+        ? 'UNAVAILABLE'
+        : pumpStatus
+            ? 'ON'
+            : 'OFF';
+    final IconData statusIcon = pumpStatus == null
+        ? Icons.help_outline
+        : pumpStatus
+            ? Icons.power
+            : Icons.power_off;
+
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Icon(statusIcon, color: statusColor, size: 32),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Text(
+                'Water Pump',
+                style: TextStyle(
+                  fontSize: 17,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Text(
+              statusText,
+              style: TextStyle(
+                fontSize: 18,
+                color: statusColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -255,116 +382,4 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildPhCard(double ph) {
-    final bool isAlert = ph < 6.5 || ph > 8.5;
-    final Color accent = isAlert ? Colors.red : Colors.green;
-    final String title = isAlert ? 'Tank Alert Notice' : 'Tank Status Notice';
-    final String label = isAlert ? 'pH Out of Range' : 'pH in Safe Range';
-    final String detail = isAlert
-        ? 'Current pH is ${ph.toStringAsFixed(2)} and requires attention.'
-        : 'Current pH is ${ph.toStringAsFixed(2)} and is within normal range.';
-
-    return Container(
-      margin: const EdgeInsets.only(top: 4),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isAlert ? Colors.red.shade50 : Colors.green.shade50,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: accent, width: 1.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                isAlert ? Icons.warning_amber_rounded : Icons.check_circle,
-                color: accent,
-                size: 24,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: accent,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: accent,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  isAlert ? 'ALERT' : 'NORMAL',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
-                ),
-                RichText(
-                  text: TextSpan(
-                    children: [
-                      TextSpan(
-                        text: ph.toStringAsFixed(2),
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          color: accent,
-                        ),
-                      ),
-                      const TextSpan(
-                        text: ' pH',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            detail,
-            style: const TextStyle(
-              fontSize: 13,
-              color: Colors.black87,
-              height: 1.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

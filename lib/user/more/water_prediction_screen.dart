@@ -170,6 +170,7 @@ class _WaterPredictionScreenState extends State<WaterPredictionScreen> {
                 ),
                 const SizedBox(height: 8),
                 _buildFinishCard(),
+                /*
                 const SizedBox(height: 24),
                 _sectionTitle(
                   'Pump Status Predictor',
@@ -178,6 +179,7 @@ class _WaterPredictionScreenState extends State<WaterPredictionScreen> {
                 const SizedBox(height: 8),
                 _buildPumpCard(),
                 const SizedBox(height: 16),
+                */
               ],
             ),
           ),

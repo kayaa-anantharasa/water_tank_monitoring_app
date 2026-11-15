@@ -468,7 +468,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
             }
 
             // 2. Low Water Alert
-            if (waterLevel <= 25.0) {
+            if (waterLevel < 20.0) {
               activeAlerts.add(
                 AlertData(
                   title: 'Low Water Level',
