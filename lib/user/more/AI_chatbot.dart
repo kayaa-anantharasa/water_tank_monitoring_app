@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:speech_to_text/speech_to_text.dart';
@@ -18,8 +19,7 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
   bool isLoading = false;
   bool _isListening = false;
 
-  final String _geminiApiKey =
-      const String.fromEnvironment('GEMINI_API_KEY');
+  static const String _geminiApiKey = 'AQ.Ab8RN6LvJgcMHmMIvnfx9eQMNwVgfRJo5uuWsvoBmMUai8cGMA';
 
   @override
   void initState() {
@@ -64,37 +64,50 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
     final userQuery = controller.text.trim();
     if (userQuery.isEmpty) return;
 
+    if (_geminiApiKey == 'PASTE_YOUR_NEW_GEMINI_API_KEY_HERE') {
+      setState(() {
+        responseText = 'Add your new Gemini API key in AI_chatbot.dart first.';
+      });
+      return;
+    }
+
     setState(() {
       isLoading = true;
       responseText = "Gemini is analyzing your tank data...";
     });
 
     try {
-      final snapshot = await FirebaseDatabase.instance.ref('SensorData').get();
       String databaseContext =
           "No real-time sensor data available at the moment.";
+      String? databaseWarning;
 
-      if (snapshot.value != null) {
-        final dataMap = Map<dynamic, dynamic>.from(snapshot.value as Map);
-        final latestKey = dataMap.keys.last;
-        final sensor = dataMap[latestKey];
+      try {
+        final snapshot =
+            await FirebaseDatabase.instance.ref('SensorData').get();
+        if (snapshot.value != null) {
+          final dataMap = Map<dynamic, dynamic>.from(snapshot.value as Map);
+          final latestKey = dataMap.keys.last;
+          final sensor = dataMap[latestKey];
 
-        double ph = double.tryParse(sensor['ph'].toString()) ?? 7.0;
-        double level =
-            double.tryParse(sensor['water_level_percent'].toString()) ?? 0.0;
-        double flow1 =
-            double.tryParse(sensor['flow_sensor1'].toString()) ?? 0.0;
-        double flow2 =
-            double.tryParse(sensor['flow_sensor2'].toString()) ?? 0.0;
+          double ph = double.tryParse(sensor['ph'].toString()) ?? 7.0;
+          double level =
+              double.tryParse(sensor['water_level_percent'].toString()) ?? 0.0;
+          double flow1 =
+              double.tryParse(sensor['flow_sensor1'].toString()) ?? 0.0;
+          double flow2 =
+              double.tryParse(sensor['flow_sensor2'].toString()) ?? 0.0;
 
-        databaseContext =
-            """
+          databaseContext =
+              """
         Current Live Water Tank Sensor Data:
         - Water Level: $level cm
         - pH Level: $ph
         - Water Flow In (Sensor 1): $flow1 L/min
         - Water Flow Out (Sensor 2): $flow2 L/min
         """;
+        }
+      } on FirebaseException catch (e) {
+        databaseWarning = 'Could not load live Firebase sensor data: ${e.message}';
       }
 
       final model = GenerativeModel(
@@ -120,15 +133,18 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
       final response = await model.generateContent(content);
 
       setState(() {
-        responseText =
+        final answer =
             response.text ?? "Sorry, I couldn't process that response.";
+        responseText = databaseWarning == null
+            ? answer
+            : '$answer\n\n$databaseWarning';
         isLoading = false;
       });
 
       controller.clear();
     } catch (e) {
       setState(() {
-        responseText = "Error connecting to Gemini or Database: $e";
+        responseText = "Gemini API request failed: $e";
         isLoading = false;
       });
     }
