@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="dropGrad" x1="0" x2="1">
+      <stop offset="0%" stop-color="#1d8fdc"/>
+      <stop offset="50%" stop-color="#21c1f2"/>
+      <stop offset="100%" stop-color="#0f6cc8"/>
+    </linearGradient>
+  </defs>
+  <g>
+    <path d="M200 20 C245 65 300 110 300 175 C300 240 255 280 200 280 C145 280 100 240 100 175 C100 110 155 65 200 20 Z" fill="url(#dropGrad)" stroke="#0f4e8d" stroke-width="4"/>
+    <path d="M130 170 C150 120 180 90 200 92 C220 90 250 120 270 170 C255 220 234 240 200 248 C166 240 145 220 130 170 Z" fill="#b8f1ff" opacity="0.35"/>
+    <g fill="#fff" opacity="0.9">
+      <circle cx="95" cy="190" r="8"/>
+      <circle cx="112" cy="150" r="6"/>
+      <circle cx="298" cy="150" r="6"/>
+      <circle cx="312" cy="195" r="8"/>
+      <circle cx="156" cy="116" r="5"/>
+      <circle cx="248" cy="116" r="5"/>
+    </g>
+    <path d="M170 145 C170 130 180 118 196 118 C214 118 225 132 225 149 C225 167 212 179 196 188 C181 179 170 167 170 145 Z" fill="#f7f7f7" opacity="0.9"/>
+    <text x="200" y="170" text-anchor="middle" font-size="24" font-weight="700" fill="#0a3d76" font-family="Arial, Helvetica, sans-serif">JPP</text>
+    <text x="200" y="205" text-anchor="middle" font-size="22" font-weight="700" fill="#0a3d76" font-family="Arial, Helvetica, sans-serif">SABAH</text>
+  </g>
+</svg>

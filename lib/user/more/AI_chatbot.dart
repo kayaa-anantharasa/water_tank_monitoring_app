@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:speech_to_text/speech_to_text.dart';
+import 'water_prediction_service.dart';
 
 class AIChatbotScreen extends StatefulWidget {
   const AIChatbotScreen({super.key});
@@ -13,13 +14,14 @@ class AIChatbotScreen extends StatefulWidget {
 class _AIChatbotScreenState extends State<AIChatbotScreen> {
   final TextEditingController controller = TextEditingController();
   final SpeechToText _speechToText = SpeechToText();
+  final WaterPredictionService _predictionService = WaterPredictionService();
 
   String responseText =
       "I am your Gemini-powered Smart Water Tank Assistant! Ask me anything about your tank.";
   bool isLoading = false;
   bool _isListening = false;
 
-  static const String _geminiApiKey = 'AQ.Ab8RN6LvJgcMHmMIvnfx9eQMNwVgfRJo5uuWsvoBmMUai8cGMA';
+  static const String _geminiApiKey = 'AQ.Ab8RN6KufLK9G3LSLgdaoAEkwMzzQT9aMGyYfY59vJYdMz0Wbw';
 
   @override
   void initState() {
@@ -79,7 +81,10 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
     try {
       String databaseContext =
           "No real-time sensor data available at the moment.";
+      String predictionContext =
+          "Water prediction data is currently unavailable.";
       String? databaseWarning;
+        double? currentWaterLevel;
 
       try {
         final snapshot =
@@ -92,6 +97,7 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
           double ph = double.tryParse(sensor['ph'].toString()) ?? 7.0;
           double level =
               double.tryParse(sensor['water_level_percent'].toString()) ?? 0.0;
+            currentWaterLevel = level;
           double flow1 =
               double.tryParse(sensor['flow_sensor1'].toString()) ?? 0.0;
           double flow2 =
@@ -100,7 +106,7 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
           databaseContext =
               """
         Current Live Water Tank Sensor Data:
-        - Water Level: $level cm
+        - Water Level: $level%
         - pH Level: $ph
         - Water Flow In (Sensor 1): $flow1 L/min
         - Water Flow Out (Sensor 2): $flow2 L/min
@@ -108,6 +114,14 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
         }
       } on FirebaseException catch (e) {
         databaseWarning = 'Could not load live Firebase sensor data: ${e.message}';
+      }
+
+      try {
+        predictionContext = await _predictionService.getPredictionContext(
+          currentWaterLevel: currentWaterLevel,
+        );
+      } catch (e) {
+        predictionContext = 'Water prediction data is unavailable: $e';
       }
 
       final model = GenerativeModel(
@@ -120,11 +134,15 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
       You are an expert Smart Water Tank Monitor AI Assistant. 
       Here is the latest real-time system data from the Firebase database:
       $databaseContext
+
+      Here is the latest prediction data from the water forecast engine:
+      $predictionContext
       
       The user is asking this question: "$userQuery"
       
       Instructions:
-      - Answer the user's question accurately using the provided sensor data.
+      - Answer the user's question accurately using the provided sensor data and prediction data.
+      - If the user asks about refill timing, finish time, forecast, usage, tank level trend, or pump behavior, use the prediction context as the main evidence.
       - If the water level is dangerously low (e.g., < 20cm) or pH is abnormal (outside 6.5 - 8.5), proactively alert them in a helpful tone.
       - Keep the response clear, professional, and easy to understand.
       """;

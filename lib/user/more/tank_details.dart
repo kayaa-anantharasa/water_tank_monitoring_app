@@ -56,7 +56,7 @@ class _TankDetailsScreenState extends State<TankDetailsScreen> {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        title: const Text('Tank Details & Analytics'),
+        title: const Text('Tank Details'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         elevation: 2,

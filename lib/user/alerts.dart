@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
@@ -44,143 +45,340 @@ class _AlertsScreenState extends State<AlertsScreen> {
   );
 
   // --- PDF Generation Function ---
+
   Future<void> _generateAndSharePDF(List<AlertData> currentAlerts) async {
-    final pdf = pw.Document();
+    try {
+      final pdf = pw.Document();
+      final reportDate = DateFormat('dd MMMM yyyy').format(DateTime.now());
+        final issueAlerts = currentAlerts
+          .where((alert) => !alert.title.startsWith('Water Pump Status:'))
+          .toList();
+        final pumpStatusAlert = currentAlerts
+          .where((alert) => alert.title.startsWith('Water Pump Status:'))
+          .firstOrNull;
 
-    final String currentDate = DateFormat(
-      'yyyy-MM-dd hh:mm a',
-    ).format(DateTime.now());
+      final umsLogoBytes =
+          (await rootBundle.load('assets/images/ums_logo.png'))
+              .buffer
+              .asUint8List();
 
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        build: (pw.Context context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              // PDF Header
-              pw.Center(
-                child: pw.Column(
+      final jppLogoBytes =
+          (await rootBundle.load('assets/images/jpp_logo.png'))
+              .buffer
+              .asUint8List();
+
+      final umsLogo = pw.MemoryImage(umsLogoBytes);
+      final jppLogo = pw.MemoryImage(jppLogoBytes);
+
+  // Formal academic-document style
+  final normalStyle = pw.TextStyle(
+    font: pw.Font.times(),
+    fontSize: 9,
+  );
+
+  final boldStyle = pw.TextStyle(
+    font: pw.Font.timesBold(),
+    fontSize: 9,
+  );
+
+  // Section heading
+  pw.Widget sectionHeading(String title) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(top: 6, bottom: 3),
+      child: pw.Text(
+        title,
+        style: pw.TextStyle(
+          font: pw.Font.timesBold(),
+          fontSize: 10,
+        ),
+      ),
+    );
+  }
+
+  // Reusable formal table
+  pw.Widget reportTable(
+    List<List<String>> rows,
+  ) {
+    return pw.Table(
+      border: pw.TableBorder.all(
+        color: PdfColors.grey700,
+        width: 0.6,
+      ),
+      columnWidths: {
+        0: const pw.FlexColumnWidth(1.1),
+        1: const pw.FlexColumnWidth(2),
+      },
+      children: [
+        pw.TableRow(
+          repeat: true,
+          decoration: const pw.BoxDecoration(
+            color: PdfColors.grey200,
+          ),
+          children: [
+            'Item',
+            'Details',
+          ].map((value) {
+            return pw.Padding(
+              padding: const pw.EdgeInsets.all(3),
+              child: pw.Text(
+                value,
+                style: boldStyle,
+              ),
+            );
+          }).toList(),
+        ),
+        ...rows.map((row) {
+          return pw.TableRow(
+            children: row.map((value) {
+              return pw.Padding(
+                padding: const pw.EdgeInsets.all(3),
+                child: pw.Text(
+                  value,
+                  style: normalStyle,
+                ),
+              );
+            }).toList(),
+          );
+        }),
+      ],
+    );
+  }
+
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.fromLTRB(34, 24, 34, 24),
+          theme: pw.ThemeData.withFont(
+            base: pw.Font.times(),
+            bold: pw.Font.timesBold(),
+          ),
+          build: (context) => pw.FittedBox(
+            fit: pw.BoxFit.scaleDown,
+            child: pw.SizedBox(
+              width: PdfPageFormat.a4.width - 68,
+              child: pw.Column(
+                mainAxisSize: pw.MainAxisSize.min,
+                crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                children: [
+                // Institutional report header
+                pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
                   children: [
-                    pw.Text(
-                      'SMART WATER TANK SYSTEM',
-                      style: pw.TextStyle(
-                        fontSize: 24,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
+                    pw.Image(
+                      umsLogo,
+                      width: 58,
+                      height: 58,
+                      fit: pw.BoxFit.contain,
                     ),
-                    pw.SizedBox(height: 4),
-                    pw.Text(
-                      'OFFICIAL MAINTENANCE NOTICE',
-                      style: pw.TextStyle(
-                        fontSize: 18,
-                        color: PdfColors.red800,
-                      ),
-                    ),
-                    pw.SizedBox(height: 10),
-                    pw.Divider(),
-                  ],
-                ),
-              ),
-              pw.SizedBox(height: 10),
-              pw.Text(
-                'Report Generated: $currentDate',
-                style: const pw.TextStyle(
-                  fontSize: 12,
-                  color: PdfColors.grey700,
-                ),
-              ),
-              pw.SizedBox(height: 20),
-
-              // PDF Body
-              if (currentAlerts.isEmpty)
-                pw.Center(
-                  child: pw.Text(
-                    'SYSTEM NORMAL: No active alerts at this time.',
-                    style: pw.TextStyle(
-                      fontSize: 16,
-                      fontWeight: pw.FontWeight.bold,
-                      color: PdfColors.green,
-                    ),
-                  ),
-                )
-              else
-                pw.Text(
-                  'ACTION REQUIRED:',
-                  style: pw.TextStyle(
-                    fontSize: 16,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                ),
-              pw.SizedBox(height: 10),
-
-              // Iterate through active alerts and draw boxes for each
-              ...currentAlerts.map((alert) {
-                return pw.Container(
-                  margin: const pw.EdgeInsets.only(bottom: 12),
-                  padding: const pw.EdgeInsets.all(12),
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: alert.pdfColor, width: 2),
-                    borderRadius: const pw.BorderRadius.all(
-                      pw.Radius.circular(8),
-                    ),
-                  ),
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Row(
-                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    pw.Expanded(
+                      child: pw.Column(
+                        mainAxisAlignment: pw.MainAxisAlignment.center,
                         children: [
                           pw.Text(
-                            alert.title,
+                            'UNIVERSITI MALAYSIA SABAH',
+                            textAlign: pw.TextAlign.center,
                             style: pw.TextStyle(
-                              fontSize: 14,
-                              fontWeight: pw.FontWeight.bold,
-                              color: alert.pdfColor,
+                              font: pw.Font.timesBold(),
+                              fontSize: 10,
                             ),
                           ),
+                          pw.SizedBox(height: 3),
                           pw.Text(
-                            alert.timeText,
-                            style: const pw.TextStyle(
-                              fontSize: 12,
-                              color: PdfColors.grey700,
+                            'SMART WATER TANK MONITORING SYSTEM',
+                            textAlign: pw.TextAlign.center,
+                            style: pw.TextStyle(
+                              font: pw.Font.timesBold(),
+                              fontSize: 9,
+                            ),
+                          ),
+                          pw.SizedBox(height: 3),
+                          pw.Text(
+                            'MAINTENANCE REQUEST REPORT',
+                            textAlign: pw.TextAlign.center,
+                            style: pw.TextStyle(
+                              font: pw.Font.timesBold(),
+                              fontSize: 11,
                             ),
                           ),
                         ],
                       ),
-                      pw.SizedBox(height: 6),
-                      pw.Text(
-                        alert.description,
-                        style: const pw.TextStyle(fontSize: 12),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-
-              pw.Spacer(),
-              pw.Divider(),
-              pw.Center(
-                child: pw.Text(
-                  'End of Report',
-                  style: const pw.TextStyle(
-                    fontSize: 10,
-                    color: PdfColors.grey,
-                  ),
+                    ),
+                    pw.Image(
+                      jppLogo,
+                      width: 58,
+                      height: 58,
+                      fit: pw.BoxFit.contain,
+                    ),
+                  ],
                 ),
+                pw.SizedBox(height: 4),
+                pw.Divider(thickness: 1, color: PdfColors.black),
+                pw.SizedBox(height: 4),
+                // Report reference and date
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Reference No.: WMS-RPT-2026-001', style: boldStyle),
+                    pw.Text('Date: $reportDate', style: boldStyle),
+                  ],
+                ),
+                pw.SizedBox(height: 5),
+                pw.Text(
+                  'To: Jabatan Pembangunan dan Penyelenggaraan (JPP), '
+                  'Universiti Malaysia Sabah',
+                  style: normalStyle,
+                ),
+                pw.SizedBox(height: 3),
+                pw.Text(
+                  'Subject: Maintenance Request for Tank A - '
+                  'Kolej Kediaman Tun Mustapha',
+                  style: boldStyle,
+                ),
+                pw.SizedBox(height: 5),
+                pw.Text('Dear Maintenance Team,', style: normalStyle),
+                pw.SizedBox(height: 3),
+                pw.Text(
+                  'Based on the monitoring records available to the Smart Water '
+                  'Tank Monitoring System, the following tank information and '
+                  'detected conditions are recorded for maintenance reference.',
+                  textAlign: pw.TextAlign.justify,
+                  style: normalStyle.copyWith(height: 1.2),
+                ),
+                sectionHeading('1. TANK INFORMATION'),
+                reportTable([
+                  ['Tank Name', 'Tank A'],
+                  [
+                    'Location',
+                    'Kolej Kediaman Tun Mustapha, Universiti Malaysia Sabah',
+                  ],
+                  [
+                    'Last Recorded Water Level',
+                    'Refer to the latest sensor record',
+                  ],
+                  [
+                    'Pump Status',
+                    pumpStatusAlert?.title.endsWith('ON') == true
+                        ? 'ON - Operating'
+                        : pumpStatusAlert?.title.endsWith('OFF') == true
+                            ? 'OFF - Not operating'
+                            : 'Unavailable',
+                  ],
+                  [
+                    'System Status',
+                    issueAlerts.any((alert) => alert.title.contains('Offline'))
+                        ? 'Offline / Maintenance Required'
+                      : issueAlerts.isEmpty
+                            ? 'No active alert'
+                            : 'Active Alert Detected',
+                  ],
+                  [
+                    'Last Sensor Update',
+                    currentAlerts.isNotEmpty
+                        ? currentAlerts.first.timeText
+                        : 'No active alert',
+                  ],
+                  [
+                    'Maintenance Priority',
+                    issueAlerts.any(
+                      (alert) =>
+                          alert.title.contains('Critical') ||
+                          alert.title.contains('Leakage'),
+                    )
+                        ? 'High - Requires Attention'
+                        : issueAlerts.isEmpty
+                            ? 'Normal'
+                            : 'Review Required',
+                  ],
+                ]),
+                sectionHeading('2. DETECTED CONDITIONS'),
+                if (issueAlerts.isEmpty)
+                  pw.Text(
+                    'System Online: No active maintenance issue detected.',
+                    style: normalStyle,
+                  )
+                else
+                  ...issueAlerts.map((alert) {
+                    return pw.Padding(
+                      padding: const pw.EdgeInsets.only(bottom: 3),
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            alert.title,
+                            style: boldStyle.copyWith(color: alert.pdfColor),
+                          ),
+                          pw.Text(
+                            alert.description,
+                            textAlign: pw.TextAlign.justify,
+                            style: normalStyle.copyWith(height: 1.15),
+                          ),
+                          pw.Text(
+                            'Recorded Time: ${alert.timeText}',
+                            style: pw.TextStyle(
+                              font: pw.Font.timesItalic(),
+                              fontSize: 8,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                sectionHeading('3. TANK MAINTENANCE RECORDS'),
+                reportTable([
+                  ['Received / Inspected By', '________________________'],
+                  ['Inspection Date and Time', '________________________'],
+                  ['Findings / Remarks', '________________________'],
+                  [
+                    'Maintenance Performed / Action Taken',
+                    '________________________',
+                  ],
+                  ['Completion Status', 'Pending / In Progress / Resolved'],
+                  ['Signature', '________________________'],
+                ]),
+                pw.SizedBox(height: 6),
+                pw.Text('Yours faithfully,', style: normalStyle),
+                pw.SizedBox(height: 8),
+                pw.Text(
+                  'Smart Water Tank Monitoring System',
+                  style: boldStyle,
+                ),
+                pw.Text('Universiti Malaysia Sabah', style: normalStyle),
+                ],
               ),
-            ],
-          );
-        },
-      ),
-    );
+            ),
+          ),
+        ),
+      );
 
-    // This will open a bottom sheet on the phone allowing the user to Save to Files, Print, or WhatsApp it.
-    await Printing.sharePdf(
-      bytes: await pdf.save(),
-      filename: 'Tank_Alert_Notice.pdf',
-    );
+          await Printing.sharePdf(
+            bytes: await pdf.save(),
+            filename: 'Tank_Maintenance_Report.pdf',
+          );
+
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'PDF downloaded successfully',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              duration: Duration(seconds: 2),
+            ),
+          );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to download PDF. Please try again.'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -215,10 +413,27 @@ class _AlertsScreenState extends State<AlertsScreen> {
             final double waterLevel = (sensorData['water_level_percent'] ?? 0)
                 .toDouble();
             final double flowSensor2 = (sensorData['flow_sensor2'] ?? 0)
-                .toDouble(); // Outflow
+              .toDouble(); // Outflow
+            final double? ph = double.tryParse(
+              '${sensorData['ph'] ?? ''}',
+            );
 
-            // Updated to match your database structure
-            final bool pumpStatus = sensorData['pump_active'] ?? false;
+            final dynamic rawPumpStatus = sensorData['pump_active'];
+            final bool? pumpStatus = rawPumpStatus is bool
+              ? rawPumpStatus
+              : rawPumpStatus is num
+                ? rawPumpStatus != 0
+                : rawPumpStatus is String
+                  ? rawPumpStatus.toLowerCase() == 'on' ||
+                      rawPumpStatus.toLowerCase() == 'true' ||
+                      rawPumpStatus == '1'
+                    ? true
+                    : rawPumpStatus.toLowerCase() == 'off' ||
+                        rawPumpStatus.toLowerCase() == 'false' ||
+                        rawPumpStatus == '0'
+                      ? false
+                      : null
+                  : null;
             final int timestampMillis = (sensorData['timestamp'] ?? 0).toInt();
 
             DateTime lastUpdateDate = DateTime.fromMillisecondsSinceEpoch(
@@ -261,7 +476,40 @@ class _AlertsScreenState extends State<AlertsScreen> {
               );
             }
 
-            // 3. Leakage Alert
+            // 3. Abnormal pH Alert
+            if (ph != null && (ph < 6.5 || ph > 8.5)) {
+              activeAlerts.add(
+                AlertData(
+                  title: 'Abnormal pH Level',
+                  description:
+                      'The recorded pH is ${ph.toStringAsFixed(2)}, outside the safe range of 6.5 to 8.5. Please inspect the water quality.',
+                  timeText: formattedTime,
+                  uiColor: Colors.deepOrange,
+                  uiIcon: Icons.science,
+                  pdfColor: PdfColors.deepOrange,
+                ),
+              );
+            }
+
+            // 4. Pump Status
+            if (pumpStatus != null) {
+              activeAlerts.add(
+                AlertData(
+                  title: pumpStatus
+                      ? 'Water Pump Status: ON'
+                      : 'Water Pump Status: OFF',
+                  description: pumpStatus
+                      ? 'The water pump is operating.'
+                      : 'The water pump is not operating.',
+                  timeText: formattedTime,
+                  uiColor: pumpStatus ? Colors.green : Colors.orange,
+                  uiIcon: pumpStatus ? Icons.power : Icons.power_off,
+                  pdfColor: pumpStatus ? PdfColors.green : PdfColors.orange,
+                ),
+              );
+            }
+
+            // 5. Leakage Alert
             bool suspectedLeak = (pumpStatus == false && flowSensor2 > 0.5);
             if (suspectedLeak) {
               activeAlerts.add(
@@ -290,7 +538,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
 
           // --- Security Check on the Floating Action Button ---
           floatingActionButton: FloatingActionButton.extended(
-            onPressed: () {
+            onPressed: () async {
               // Intercept the click if the user is not an admin
               if (!widget.isAdmin) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -307,7 +555,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
               }
 
               // If they are an admin, proceed with generating the PDF
-              _generateAndSharePDF(activeAlerts);
+              await _generateAndSharePDF(activeAlerts);
             },
             // Change colors and icons dynamically based on admin status
             backgroundColor: widget.isAdmin

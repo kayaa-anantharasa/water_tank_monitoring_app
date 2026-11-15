@@ -51,7 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
               .toDouble();
           final double flowSensor2 = (sensorData['flow_sensor2'] ?? 0)
               .toDouble();
-          final bool pumpStatus = sensorData['pump_active'] ?? false;
+          final double ph = (sensorData['ph'] ?? 7.0).toDouble();
 
           // Parse the timestamp
           final int timestampMillis = (sensorData['timestamp'] ?? 0).toInt();
@@ -93,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 16),
                 _buildFlowCard(flowSensor1, flowSensor2),
                 const SizedBox(height: 16),
-                _buildPumpStatusCard(pumpStatus),
+                _buildPhCard(ph),
               ],
             ),
           );
@@ -255,48 +255,115 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- UI Widget for Pump Status ---
-  Widget _buildPumpStatusCard(bool isPumpOn) {
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Pump Status',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+  Widget _buildPhCard(double ph) {
+    final bool isAlert = ph < 6.5 || ph > 8.5;
+    final Color accent = isAlert ? Colors.red : Colors.green;
+    final String title = isAlert ? 'Tank Alert Notice' : 'Tank Status Notice';
+    final String label = isAlert ? 'pH Out of Range' : 'pH in Safe Range';
+    final String detail = isAlert
+        ? 'Current pH is ${ph.toStringAsFixed(2)} and requires attention.'
+        : 'Current pH is ${ph.toStringAsFixed(2)} and is within normal range.';
+
+    return Container(
+      margin: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isAlert ? Colors.red.shade50 : Colors.green.shade50,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: accent, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isAlert ? Icons.warning_amber_rounded : Icons.check_circle,
+                color: accent,
+                size: 24,
               ),
-            ),
-            Row(
-              children: [
-                // Status Indicator Dot
-                Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: isPumpOn ? Colors.green : Colors.red,
-                    shape: BoxShape.circle,
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: accent,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  isPumpOn ? 'ON' : 'OFF',
-                  style: TextStyle(
-                    fontSize: 20,
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: accent,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  isAlert ? 'ALERT' : 'NORMAL',
+                  style: const TextStyle(
+                    fontSize: 10,
                     fontWeight: FontWeight.bold,
-                    color: isPumpOn ? Colors.green : Colors.red,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                RichText(
+                  text: TextSpan(
+                    children: [
+                      TextSpan(
+                        text: ph.toStringAsFixed(2),
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          color: accent,
+                        ),
+                      ),
+                      const TextSpan(
+                        text: ' pH',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            detail,
+            style: const TextStyle(
+              fontSize: 13,
+              color: Colors.black87,
+              height: 1.4,
+            ),
+          ),
+        ],
       ),
     );
   }
