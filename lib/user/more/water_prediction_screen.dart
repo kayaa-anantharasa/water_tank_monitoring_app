@@ -159,6 +159,7 @@ class _WaterPredictionScreenState extends State<WaterPredictionScreen> {
                   const SizedBox(height: 24),
                   _levelSection(),
                 ],
+                /*
                 const SizedBox(height: 24),
                 _sectionTitle('When Will Water Come Next?', Icons.schedule),
                 const SizedBox(height: 8),
@@ -170,6 +171,7 @@ class _WaterPredictionScreenState extends State<WaterPredictionScreen> {
                 ),
                 const SizedBox(height: 8),
                 _buildFinishCard(),
+                */
                 /*
                 const SizedBox(height: 24),
                 _sectionTitle(

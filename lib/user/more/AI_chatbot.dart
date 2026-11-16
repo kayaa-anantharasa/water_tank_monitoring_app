@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'water_prediction_service.dart';
@@ -84,7 +85,32 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
       String predictionContext =
           "Water prediction data is currently unavailable.";
       String? databaseWarning;
-        double? currentWaterLevel;
+      double? currentWaterLevel;
+      double minPh = 6.5;
+      double maxPh = 7.5;
+
+      try {
+        final phSettings = await FirebaseFirestore.instance
+            .collection('settings')
+            .doc('ph_config')
+            .get();
+        final settings = phSettings.data();
+        if (settings != null) {
+          minPh =
+              double.tryParse(settings['min_ph']?.toString() ?? '') ?? minPh;
+          maxPh =
+              double.tryParse(settings['max_ph']?.toString() ?? '') ?? maxPh;
+        }
+        if (minPh >= maxPh) {
+          minPh = 6.5;
+          maxPh = 7.5;
+          databaseWarning =
+              'The saved pH range is invalid; using the default range of 6.5 to 7.5.';
+        }
+      } on FirebaseException catch (e) {
+        databaseWarning =
+            'Could not load pH settings: ${e.message}. Using the default range of 6.5 to 7.5.';
+      }
 
       try {
         final snapshot =
@@ -94,26 +120,37 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
           final latestKey = dataMap.keys.last;
           final sensor = dataMap[latestKey];
 
-          double ph = double.tryParse(sensor['ph'].toString()) ?? 7.0;
+          final double? ph = double.tryParse(sensor['ph']?.toString() ?? '');
           double level =
               double.tryParse(sensor['water_level_percent'].toString()) ?? 0.0;
-            currentWaterLevel = level;
+          currentWaterLevel = level;
           double flow1 =
               double.tryParse(sensor['flow_sensor1'].toString()) ?? 0.0;
           double flow2 =
               double.tryParse(sensor['flow_sensor2'].toString()) ?? 0.0;
+          final phStatus = ph == null
+              ? 'unavailable'
+              : ph < minPh || ph > maxPh
+              ? 'outside the configured normal range'
+              : 'within the configured normal range';
 
           databaseContext =
               """
         Current Live Water Tank Sensor Data:
         - Water Level: $level%
-        - pH Level: $ph
+        - pH Level: ${ph ?? 'unavailable'}
+        - Configured normal pH range: $minPh to $maxPh
+        - pH Status: $phStatus
         - Water Flow In (Sensor 1): $flow1 L/min
         - Water Flow Out (Sensor 2): $flow2 L/min
         """;
         }
       } on FirebaseException catch (e) {
-        databaseWarning = 'Could not load live Firebase sensor data: ${e.message}';
+        final warning =
+            'Could not load live Firebase sensor data: ${e.message}';
+        databaseWarning = databaseWarning == null
+            ? warning
+            : '$databaseWarning\n$warning';
       }
 
       try {
@@ -137,13 +174,20 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
 
       Here is the latest prediction data from the water forecast engine:
       $predictionContext
+
+      The configured normal pH range is $minPh to $maxPh. Treat readings
+      within this inclusive range as normal. A pH reading is abnormal only
+      when it is below the configured minimum or above the configured maximum.
+      Do not apply any other fixed pH range.
       
       The user is asking this question: "$userQuery"
       
       Instructions:
       - Answer the user's question accurately using the provided sensor data and prediction data.
       - If the user asks about refill timing, finish time, forecast, usage, tank level trend, or pump behavior, use the prediction context as the main evidence.
-      - If the water level is dangerously low (e.g., < 20cm) or pH is abnormal (outside 6.5 - 8.5), proactively alert them in a helpful tone.
+      - For questions like "When will water come next?", report the estimated refill time from the refill timing data. For "When will the water finish?", report the estimated time until the tank is empty from the water finish timing data.
+      - Include the estimated date/time and remaining hours when available. These are forecasts, not guaranteed schedules; never invent a time if prediction data is missing or unavailable.
+      - If the water level is dangerously low (e.g., < 20cm) or the provided pH status is outside the configured range, proactively alert them in a helpful tone.
       - Keep the response clear, professional, and easy to understand.
       """;
 
